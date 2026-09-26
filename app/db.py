@@ -1,3 +1,4 @@
+import asyncio
 import os
 from contextlib import asynccontextmanager
 from datetime import timedelta
@@ -51,12 +52,24 @@ CREATE INDEX IF NOT EXISTS idx_temperature_readings_recorded_at
 """
 
 
-async def init_db() -> None:
+async def init_db(retries: int = 10, delay_s: float = 3.0) -> None:
     global pool
     kwargs = {}
     if SSL_MODE:
         kwargs["ssl"] = SSL_MODE
-    pool = await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=5, **kwargs)
+    # Retry startup so a slow/late-starting Postgres doesn't kill the container.
+    last_err: Exception | None = None
+    for attempt in range(1, retries + 1):
+        try:
+            pool = await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=5, **kwargs)
+            break
+        except (OSError, asyncpg.PostgresError) as err:
+            last_err = err
+            if attempt == retries:
+                raise
+            print(f"[db] connect attempt {attempt}/{retries} failed: {err}; retrying in {delay_s}s", flush=True)
+            await asyncio.sleep(delay_s)
+    assert pool is not None
     async with pool.acquire() as conn:
         await conn.execute(CREATE_TABLE_SQL)
 
