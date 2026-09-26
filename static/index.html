@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a1628">
+  <title>AquaPulse — Tank Temperature</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%90%A0%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+  <header class="header">
+    <div class="logo">
+      <span class="logo-fish">🐟</span>
+      <h1>Aqua<span class="accent">Pulse</span></h1>
+    </div>
+    <div class="live-dot" id="liveDot" title="Auto-refreshing every 30s"><span></span>Live</div>
+  </header>
+
+  <main class="content">
+    <section class="hero card">
+      <div class="hero-temp" id="currentTemp">--</div>
+      <div class="hero-unit">°C</div>
+      <div class="hero-sub" id="currentAt">&nbsp;</div>
+    </section>
+
+    <section class="stat-grid">
+      <div class="card stat">
+        <div class="stat-label">Min</div>
+        <div class="stat-value min" id="statMin">--</div>
+        <div class="stat-time" id="statMinAt"></div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Avg</div>
+        <div class="stat-value avg" id="statAvg">--</div>
+        <div class="stat-time"></div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Max</div>
+        <div class="stat-value max" id="statMax">--</div>
+        <div class="stat-time" id="statMaxAt"></div>
+      </div>
+    </section>
+
+    <section class="card chart-card">
+      <div class="range-tabs" id="rangeTabs">
+        <button data-range="hour" aria-pressed="false">Hour</button>
+        <button data-range="24h" aria-pressed="true" class="active">24h</button>
+        <button data-range="7d" aria-pressed="false">7d</button>
+        <button data-range="30d" aria-pressed="false">30d</button>
+        <button data-range="all" aria-pressed="false">All</button>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="tempChart"></canvas>
+      </div>
+      <div class="chart-meta">
+        <span id="sampleCount">— samples</span>
+        <a id="csvLink" href="/api/readings.csv?range=all" download>Export CSV</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    AquaPulse · fish tank temp monitor
+  </footer>
+
+  <script src="/static/chart.umd.js"></script>
+  <script src="/static/ui.js"></script>
+</body>
+</html>
