@@ -22,6 +22,11 @@
       <div class="hero-temp" id="currentTemp">--</div>
       <div class="hero-unit">°C</div>
       <div class="hero-sub" id="currentAt">&nbsp;</div>
+      <div class="hero-room" id="roomLine" hidden>
+        <span id="roomTempInline">-- °C</span>
+        <span class="dot-sep">·</span>
+        <span id="humidityInline">-- %</span>
+      </div>
     </section>
 
     <section class="stat-grid">
@@ -58,7 +63,32 @@
         <a id="csvLink" href="/api/readings.csv?range=all" download>Export CSV</a>
       </div>
     </section>
+
+    <section class="card chart-card">
+      <div class="chart-title">Humidity</div>
+      <div class="chart-wrap chart-wrap-sm">
+        <canvas id="humidityChart"></canvas>
+      </div>
+    </section>
+
+    <section class="card danger-zone">
+      <button id="clearBtn" class="btn-danger" type="button">Delete Data</button>
+    </section>
   </main>
+
+  <div class="modal-backdrop" id="clearModal" hidden>
+    <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="clearModalTitle">
+      <h2 id="clearModalTitle">Delete all data?</h2>
+      <p>
+        This permanently deletes every temperature, room temperature and humidity
+        reading in the database. This cannot be undone.
+      </p>
+      <div class="modal-actions">
+        <button id="clearCancel" class="btn-neutral" type="button">Cancel</button>
+        <button id="clearConfirm" class="btn-danger-solid" type="button">Delete all</button>
+      </div>
+    </div>
+  </div>
 
   <footer class="footer">
     AquaPulse · fish tank temp monitor

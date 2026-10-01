@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from .db import (
+    clear_readings,
     fetch_export,
     fetch_series,
     fetch_stats,
@@ -22,17 +23,29 @@ app = FastAPI(title="AquaPulse", version="1.0.0", lifespan=lifespan)
 
 
 class ReadingIn(BaseModel):
-    temperature_c: float = Field(..., description="Temperature in Celsius")
+    temperature_c: float = Field(..., description="Tank temperature in Celsius")
+    room_temperature_c: float | None = Field(
+        None, description="Room temperature in Celsius (DHT11)"
+    )
+    humidity: float | None = Field(
+        None, ge=0, le=100, description="Relative humidity in percent (DHT11)"
+    )
 
 
 @app.post("/api/readings", status_code=201)
 async def post_reading(reading: ReadingIn) -> dict:
     if not -50.0 < reading.temperature_c < 150.0:
         raise HTTPException(422, "temperature_c out of plausible range (-50..150)")
-    row = await insert_reading(reading.temperature_c)
+    if reading.room_temperature_c is not None and not -50.0 < reading.room_temperature_c < 150.0:
+        raise HTTPException(422, "room_temperature_c out of plausible range (-50..150)")
+    row = await insert_reading(
+        reading.temperature_c, reading.room_temperature_c, reading.humidity
+    )
     return {
         "id": row["id"],
         "temperature_c": row["temperature_c"],
+        "room_temperature_c": row["room_temperature_c"],
+        "humidity": row["humidity"],
         "recorded_at": row["recorded_at"].isoformat(),
     }
 
@@ -47,6 +60,10 @@ async def get_readings(
     for r in rows:
         ts = r.get("bucket_start") or r["recorded_at"]
         point = {"t": ts.isoformat(), "c": round(r["temperature_c"], 2)}
+        if r["room_temperature_c"] is not None:
+            point["r"] = round(r["room_temperature_c"], 2)
+        if r["humidity"] is not None:
+            point["h"] = round(r["humidity"], 1)
         if bucket:
             point["min"] = round(r["min_c"], 2)
             point["max"] = round(r["max_c"], 2)
@@ -70,6 +87,8 @@ async def get_stats(
     return {
         "range": range,
         "current_c": stats.get("current_c"),
+        "current_room_c": stats.get("current_room_c"),
+        "current_humidity": stats.get("current_humidity"),
         "current_at": fmt_ts(stats.get("current_at")),
         "min_c": stats.get("min_c"),
         "min_at": fmt_ts(stats.get("min_at")),
@@ -87,15 +106,26 @@ async def get_csv(
     rows = await fetch_export(range)
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(["recorded_at", "temperature_c"])
+    writer.writerow(["recorded_at", "temperature_c", "room_temperature_c", "humidity"])
     for r in rows:
-        writer.writerow([r["recorded_at"].isoformat(), r["temperature_c"]])
+        writer.writerow([
+            r["recorded_at"].isoformat(),
+            r["temperature_c"],
+            r["room_temperature_c"],
+            r["humidity"],
+        ])
     buf.seek(0)
     return StreamingResponse(
         iter([buf.getvalue()]),
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="aquapulse_readings.csv"'},
     )
+
+
+@app.delete("/api/readings")
+async def delete_readings() -> dict:
+    deleted = await clear_readings()
+    return {"deleted": deleted}
 
 
 @app.get("/api/health")
